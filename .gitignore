@@ -25,3 +25,6 @@ htmlcov/
 
 # Streamlit
 .streamlit/
+
+# Video temp cache
+_video_assets/
