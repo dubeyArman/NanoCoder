@@ -1,0 +1,47 @@
+{
+  "benchmark_summary": {
+    "total_naive_tokens": 66523,
+    "total_nanocoder_tokens": 12523,
+    "total_tokens_saved": 54000,
+    "overall_percentage_saved": "81.17%",
+    "cost_reduction_factor": "5.3x cheaper"
+  },
+  "tasks": [
+    {
+      "id": "TASK-01",
+      "name": "Bugfix: ZeroDivisionError Handling",
+      "status": "PASSED",
+      "nanocoder_tokens": 4213,
+      "naive_tokens": 22213,
+      "tokens_saved": 18000,
+      "percent_saved": "81.03%",
+      "nanocoder_cost": "$0.000421",
+      "naive_cost": "$0.002221",
+      "steps": 6
+    },
+    {
+      "id": "TASK-02",
+      "name": "Refactor: Token Security Validation",
+      "status": "PASSED",
+      "nanocoder_tokens": 4165,
+      "naive_tokens": 22165,
+      "tokens_saved": 18000,
+      "percent_saved": "81.21%",
+      "nanocoder_cost": "$0.000417",
+      "naive_cost": "$0.002217",
+      "steps": 6
+    },
+    {
+      "id": "TASK-03",
+      "name": "Verification: Full Suite Regression Test",
+      "status": "PASSED",
+      "nanocoder_tokens": 4145,
+      "naive_tokens": 22145,
+      "tokens_saved": 18000,
+      "percent_saved": "81.28%",
+      "nanocoder_cost": "$0.000415",
+      "naive_cost": "$0.002215",
+      "steps": 6
+    }
+  ]
+}
