@@ -1,17 +1,18 @@
 """Autonomous Demo Video Generator for NanoCoder Hackathon Submission.
 
-Generates a Full HD (1920x1080) 60fps/30fps MP4 video complete with:
-- Synchronized voiceover narration using Windows SAPI Speech Synthesis
+Generates a Full HD (1920x1080) MP4 video complete with:
+- Microsoft Zira Desktop voice narration with optimized dictating pace (Rate = 1)
+- Pixel-perfect text wrapping to ensure text never overflows card boundaries
 - High-resolution UI mockups, terminal logs, diff views, and benchmark charts
 - Transitions, animated progress bars, and token telemetry gauges
-- Complete compliance with Hackathon requirements
+- Full compliance with Global AI Hackathon requirements
 """
 
 import os
 import sys
 import subprocess
 import wave
-import numpy as np
+from typing import List
 from PIL import Image, ImageDraw, ImageFont
 import imageio_ffmpeg
 
@@ -47,8 +48,32 @@ def get_font(font_path: str, size: int):
         return ImageFont.load_default()
 
 
+def wrap_text_pixels(draw: ImageDraw.ImageDraw, text: str, font: ImageFont.FreeTypeFont, max_width: int) -> List[str]:
+    """Wraps text so every line is <= max_width in actual rendered pixels."""
+    lines: List[str] = []
+    for paragraph in text.split("\n"):
+        if not paragraph.strip():
+            lines.append("")
+            continue
+        words = paragraph.split(" ")
+        cur_line: List[str] = []
+        for word in words:
+            test = " ".join(cur_line + [word])
+            bbox = draw.textbbox((0, 0), test, font=font)
+            w = bbox[2] - bbox[0]
+            if w <= max_width:
+                cur_line.append(word)
+            else:
+                if cur_line:
+                    lines.append(" ".join(cur_line))
+                cur_line = [word]
+        if cur_line:
+            lines.append(" ".join(cur_line))
+    return lines
+
+
 def generate_tts_audio(text: str, output_wav: str) -> float:
-    """Generates speech audio using Windows SAPI SpeechSynthesizer and returns duration in seconds."""
+    """Generates speech audio using Microsoft Zira Desktop at optimized dictating pace."""
     # Sanitize special characters for Windows PowerShell
     clean_text = (
         text.replace("—", " - ")
@@ -58,11 +83,14 @@ def generate_tts_audio(text: str, output_wav: str) -> float:
         .replace("”", "'")
         .replace("’", "'")
     )
-    
+
     ps_script = f"""
 Add-Type -AssemblyName System.Speech
 $synth = New-Object System.Speech.Synthesis.SpeechSynthesizer
-$synth.Rate = 0
+try {{
+    $synth.SelectVoice("Microsoft Zira Desktop")
+}} catch {{}}
+$synth.Rate = 1
 $synth.SetOutputToWaveFile("{output_wav}")
 $synth.Speak("{clean_text}")
 $synth.Dispose()
@@ -96,7 +124,7 @@ $synth.Dispose()
 def draw_header_bar(draw: ImageDraw.ImageDraw, title: str, subtitle: str = ""):
     draw.rectangle([(0, 0), (1920, 110)], fill=(18, 22, 28))
     draw.line([(0, 110), (1920, 110)], fill=ACCENT_GREEN, width=4)
-    
+
     f_badge = get_font(FONT_BOLD, 18)
     draw.rounded_rectangle([(80, 25), (320, 55)], radius=6, fill=(35, 134, 54))
     draw.text((95, 30), "GLOBAL AI HACKATHON", font=f_badge, fill=TEXT_WHITE)
@@ -114,7 +142,6 @@ def render_scene_1(t_norm: float) -> Image.Image:
     img = Image.new("RGB", (1920, 1080), BG_DARK)
     draw = ImageDraw.Draw(img)
 
-    # Gradient top accent
     draw.rectangle([(0, 0), (1920, 12)], fill=ACCENT_GREEN)
 
     # Hero Badge
@@ -125,13 +152,13 @@ def render_scene_1(t_norm: float) -> Image.Image:
     # Track & Problem
     f_track = get_font(FONT_BOLD, 26)
     draw.text((80, 160), "Theme: AI Agents & Intelligent Systems", font=f_track, fill=ACCENT_BLUE)
-    
+
     f_prob = get_font(FONT_REGULAR, 24)
     draw.text((80, 205), "Problem Statement: Build a Coding Agent That Gets the Job Done in Few Tokens", font=f_prob, fill=TEXT_MUTED)
 
     # Main Project Title Box
     draw.rounded_rectangle([(80, 270), (1840, 680)], radius=16, fill=CARD_BG, outline=CARD_BORDER, width=2)
-    
+
     f_main = get_font(FONT_BOLD, 76)
     draw.text((130, 320), "⚡ NanoCoder", font=f_main, fill=TEXT_WHITE)
 
@@ -176,14 +203,14 @@ def render_scene_1(t_norm: float) -> Image.Image:
 
 
 def render_scene_2(t_norm: float) -> Image.Image:
-    """Scene 2: The Problem (Token Inflation)."""
+    """Scene 2: The Problem (Token Inflation) - With Strict Pixel-Perfect Text Wrapping."""
     img = Image.new("RGB", (1920, 1080), BG_DARK)
     draw = ImageDraw.Draw(img)
     draw_header_bar(draw, "The Problem: The Crisis of Token Inflation in Coding Agents", "Why standard agents burn 30,000 to 100,000+ tokens per task")
 
     cards = [
         (
-            "1. Whole-File Context Dumps",
+            "1. Whole-File Dumps",
             "30,000+ Tokens",
             "Standard coding agents ingest complete 500+ line files just to locate or inspect one target function.\n\nContext windows get choked with boilerplate imports, comments, and unrelated modules.",
             ACCENT_RED
@@ -191,13 +218,13 @@ def render_scene_2(t_norm: float) -> Image.Image:
         (
             "2. Unfiltered Test Logs",
             "3,000-5,000 Tokens/Run",
-            "Pytest and test runners return hundreds of passing ticks, platform configurations, and verbosity into context.\n\nThe agent re-reads this noise repeatedly on every failed test execution turn.",
+            "Pytest and test runners return hundreds of routine passing ticks, platform configurations, and verbosity.\n\nThe agent re-reads this noise repeatedly on every failed test execution turn.",
             ACCENT_YELLOW
         ),
         (
-            "3. Quadratic History Blowup",
+            "3. Quadratic History",
             "O(N²) Prompt Explosion",
-            "Traditional ReAct agents append all past turns verbatim. By turn 6, the prompt alone balloons past 25,000 tokens!\n\nLeads to sluggish inference latency and astronomical monthly API bills.",
+            "Traditional ReAct agents append all past turns verbatim. By turn 6, the prompt alone balloons past 25,000 tokens!\n\nThis leads to sluggish inference latency and astronomical monthly API bills.",
             ACCENT_BLUE
         )
     ]
@@ -206,29 +233,34 @@ def render_scene_2(t_norm: float) -> Image.Image:
     card_h = 600
     cx = 80
     cy = 160
+    inner_text_width = card_w - 60  # 480px max text width inside box
 
     for title, metric, body, col in cards:
+        # Draw card container
         draw.rounded_rectangle([(cx, cy), (cx + card_w, cy + card_h)], radius=14, fill=CARD_BG, outline=col, width=2)
-        
-        # Header inside card
+
+        # Title
         f_t = get_font(FONT_BOLD, 26)
         draw.text((cx + 30, cy + 35), title, font=f_t, fill=TEXT_WHITE)
 
+        # Metric
         f_m = get_font(FONT_BOLD, 36)
         draw.text((cx + 30, cy + 90), metric, font=f_m, fill=col)
 
+        # Divider line
         draw.line([(cx + 30, cy + 155), (cx + card_w - 30, cy + 155)], fill=CARD_BORDER, width=2)
 
+        # Body Text with Strict Pixel Wrapping
         f_b = get_font(FONT_REGULAR, 22)
-        # Word wrap body
-        lines = body.split("\n")
-        by = cy + 180
-        for line in lines:
+        wrapped_lines = wrap_text_pixels(draw, body, f_b, max_width=inner_text_width)
+
+        by = cy + 185
+        for line in wrapped_lines:
             if not line:
                 by += 15
                 continue
             draw.text((cx + 30, by), line, font=f_b, fill=TEXT_MUTED)
-            by += 32
+            by += 34
 
         cx += card_w + 50
 
@@ -236,16 +268,20 @@ def render_scene_2(t_norm: float) -> Image.Image:
     draw.rounded_rectangle([(80, 800), (1840, 980)], radius=12, fill=(35, 15, 20), outline=ACCENT_RED, width=2)
     f_alert_h = get_font(FONT_BOLD, 28)
     draw.text((120, 830), "⚠ The Industry Consequence:", font=f_alert_h, fill=ACCENT_RED)
-    
+
     f_alert_b = get_font(FONT_REGULAR, 24)
-    draw.text((120, 880), "A simple 3-line bug fix burns $0.20 to $1.50 per run. Scaling autonomous software engineering", font=f_alert_b, fill=TEXT_WHITE)
-    draw.text((120, 915), "becomes economically unviable for developers and enterprise engineering teams.", font=f_alert_b, fill=TEXT_WHITE)
+    alert_text = "A simple 3-line bug fix burns $0.20 to $1.50 per run. Scaling autonomous software engineering becomes economically unviable for developers and enterprise engineering teams."
+    wrapped_alert = wrap_text_pixels(draw, alert_text, f_alert_b, max_width=1650)
+    ay = 880
+    for al in wrapped_alert:
+        draw.text((120, ay), al, font=f_alert_b, fill=TEXT_WHITE)
+        ay += 36
 
     return img
 
 
 def render_scene_3(t_norm: float) -> Image.Image:
-    """Scene 3: The NanoCoder Architecture."""
+    """Scene 3: The NanoCoder Architecture - With Strict Pixel Wrapping."""
     img = Image.new("RGB", (1920, 1080), BG_DARK)
     draw = ImageDraw.Draw(img)
     draw_header_bar(draw, "The Solution: NanoCoder 4-Tier Frugality Architecture", "Engineered from the ground up for minimal token footprint")
@@ -268,7 +304,7 @@ def render_scene_3(t_norm: float) -> Image.Image:
 
     for (title, stat, desc, col), (x, y) in zip(innovations, coords):
         draw.rounded_rectangle([(x, y), (x + cw, y + ch)], radius=14, fill=CARD_BG, outline=col, width=2)
-        
+
         f_t = get_font(FONT_BOLD, 28)
         draw.text((x + 30, y + 25), title, font=f_t, fill=TEXT_WHITE)
 
@@ -278,21 +314,12 @@ def render_scene_3(t_norm: float) -> Image.Image:
 
         draw.line([(x + 30, y + 80), (x + cw - 30, y + 80)], fill=CARD_BORDER, width=2)
 
+        # Precise pixel wrapping inside 840px card
         f_d = get_font(FONT_REGULAR, 22)
-        # Simple word wrap for 840px
-        words = desc.split(" ")
-        lines = []
-        cur = []
-        for w in words:
-            cur.append(w)
-            if len(" ".join(cur)) > 55:
-                lines.append(" ".join(cur))
-                cur = []
-        if cur:
-            lines.append(" ".join(cur))
+        wrapped_desc = wrap_text_pixels(draw, desc, f_d, max_width=cw - 60)
 
         dy = y + 105
-        for l in lines:
+        for l in wrapped_desc:
             draw.text((x + 30, dy), l, font=f_d, fill=TEXT_MUTED)
             dy += 34
 
@@ -301,9 +328,9 @@ def render_scene_3(t_norm: float) -> Image.Image:
     f_sp_h = get_font(FONT_BOLD, 24)
     draw.text((120, 915), "⚡ Powered by Sponsor Technologies:", font=f_sp_h, fill=ACCENT_GREEN)
 
-    f_sp_b = get_font(FONT_REGULAR, 22)
-    draw.text((120, 955), "• Bifrost by Maxim AI: High-performance AI gateway, virtual keys, low-latency routing & token telemetry", font=f_sp_b, fill=TEXT_WHITE)
-    draw.text((1150, 955), "• Tavily: High-precision technical documentation retrieval (<150 tokens)", font=f_sp_b, fill=TEXT_WHITE)
+    f_sp_b = get_font(FONT_REGULAR, 21)
+    draw.text((120, 955), "• Bifrost by Maxim AI: High-performance AI gateway, virtual keys, low-latency routing & telemetry", font=f_sp_b, fill=TEXT_WHITE)
+    draw.text((1100, 955), "• Tavily: High-precision technical documentation retrieval (<150 tokens)", font=f_sp_b, fill=TEXT_WHITE)
 
     return img
 
@@ -330,7 +357,7 @@ def render_scene_4(t_norm: float) -> Image.Image:
     sy = 240
     for stitle, stok, sdetail in steps:
         draw.rounded_rectangle([(110, sy), (920, sy + 125)], radius=10, fill=(18, 22, 28), outline=CARD_BORDER, width=1)
-        
+
         f_st = get_font(FONT_BOLD, 22)
         draw.text((130, sy + 15), stitle, font=f_st, fill=TEXT_WHITE)
 
@@ -406,7 +433,7 @@ def render_scene_5(t_norm: float) -> Image.Image:
 
     # Detailed Benchmark Table
     draw.rounded_rectangle([(80, 320), (1840, 800)], radius=14, fill=CARD_BG, outline=CARD_BORDER, width=2)
-    
+
     # Table Header Row
     draw.rounded_rectangle([(80, 320), (1840, 390)], radius=14, fill=(28, 36, 48))
     headers = [
@@ -440,7 +467,7 @@ def render_scene_5(t_norm: float) -> Image.Image:
         draw.text((1240, ry), tnano, font=f_trb, fill=ACCENT_GREEN)
         draw.text((1460, ry), tsaved, font=f_tr, fill=TEXT_WHITE)
         draw.text((1700, ry), tpct, font=f_trb, fill=ACCENT_GREEN)
-        
+
         draw.line([(100, ry + 50), (1820, ry + 50)], fill=CARD_BORDER, width=1)
         ry += 80
 
@@ -540,7 +567,7 @@ SCENES = [
     {
         "id": 5,
         "name": "Benchmarks",
-        "narrative": "The quantitative results speak for themselves. Across representative software engineering tasks, the standard agent consumed over 66,000 tokens. NanoCoder solved the exact same tasks in just 12,500 tokens—achieving an 81.17 percent token reduction, a 5.3 times cost savings, and a 100 percent test pass rate.",
+        "narrative": "The quantitative results speak for themselves. Across representative software engineering tasks, the standard agent consumed over 66,000 tokens. NanoCoder solved the exact same tasks in just 12,500 tokens - achieving an 81.17 percent token reduction, a 5.3 times cost savings, and a 100 percent test pass rate.",
         "render_fn": render_scene_5
     },
     {
@@ -553,7 +580,7 @@ SCENES = [
 
 
 def build_demo_video(output_mp4: str = "NanoCoder_Demo_Video.mp4"):
-    print("=== STARTING NANOCODER DEMO VIDEO PRODUCTION ===")
+    print("=== STARTING NANOCODER DEMO VIDEO PRODUCTION (VOICE: ZIRA, PACE OPTIMIZED) ===")
     fps = 30
     scene_clips = []
 
@@ -561,17 +588,16 @@ def build_demo_video(output_mp4: str = "NanoCoder_Demo_Video.mp4"):
         s_id = scene["id"]
         s_name = scene["name"]
         print(f"\n[Scene {s_id}: {s_name}] Generating voice narration...")
-        
+
         wav_path = os.path.join(ASSETS_DIR, f"scene_{s_id}.wav")
         duration = generate_tts_audio(scene["narrative"], wav_path)
         print(f"  Duration: {duration:.2f} seconds")
 
-        # Add 1.2s pad to allow smooth scene digestion
-        total_scene_duration = duration + 1.2
-        num_frames = int(total_scene_duration * fps)
+        # 1.0s pad to allow smooth scene digestion
+        total_scene_duration = duration + 1.0
 
         # Render static frame image
-        print(f"  Rendering 1080p frame...")
+        print(f"  Rendering 1080p frame with pixel-perfect text wrapping...")
         frame_img = scene["render_fn"](1.0)
         frame_path = os.path.join(ASSETS_DIR, f"scene_{s_id}_frame.png")
         frame_img.save(frame_path)
@@ -602,7 +628,6 @@ def build_demo_video(output_mp4: str = "NanoCoder_Demo_Video.mp4"):
     concat_list_file = os.path.join(ASSETS_DIR, "concat_list.txt")
     with open(concat_list_file, "w") as f:
         for clip in scene_clips:
-            # Escape path for ffmpeg concat demuxer
             clean_path = clip.replace("\\", "/")
             f.write(f"file '{clean_path}'\n")
 
