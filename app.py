@@ -16,6 +16,7 @@ from nanocoder.compression.output_distiller import OutputDistiller
 from nanocoder.providers.mock_provider import MockProvider
 from nanocoder.providers.gemini_provider import GeminiProvider
 from nanocoder.providers.openai_provider import OpenAIProvider
+from nanocoder.providers.bifrost_provider import BifrostProvider
 from nanocoder.telemetry.token_counter import TokenUsage
 
 # Page Configuration
@@ -78,12 +79,15 @@ st.sidebar.title("Agent Settings")
 
 provider_choice = st.sidebar.selectbox(
     "Inference Engine",
-    ["Mock Simulator (Offline Demo)", "Gemini 3.8 Flash (Official API)", "OpenAI GPT-4o-mini"],
-    help="Select Mock Simulator for zero-config instant demo, or live API with your key."
+    ["Mock Simulator (Offline Demo)", "Bifrost Gateway (Maxim AI)", "Gemini 3.8 Flash (Official API)", "OpenAI GPT-4o-mini"],
+    help="Select Mock Simulator for zero-config instant demo, Bifrost by Maxim AI, or Gemini API."
 )
 
 api_key_input = ""
-if "Gemini" in provider_choice:
+if "Bifrost" in provider_choice:
+    bifrost_url = st.sidebar.text_input("Bifrost Gateway URL", value="http://localhost:8080/v1")
+    api_key_input = st.sidebar.text_input("Bifrost Virtual Key", type="password", value="bifrost-key")
+elif "Gemini" in provider_choice:
     api_key_input = st.sidebar.text_input("Gemini API Key", type="password", help="Leave blank if GEMINI_API_KEY environment variable is set.")
 elif "OpenAI" in provider_choice:
     api_key_input = st.sidebar.text_input("OpenAI API Key", type="password", help="Leave blank if OPENAI_API_KEY environment variable is set.")
@@ -141,7 +145,13 @@ with tab_arena:
 
         # Setup provider
         usage = TokenUsage()
-        if "Gemini" in provider_choice:
+        if "Bifrost" in provider_choice:
+            try:
+                provider = BifrostProvider(usage, model_name="gemini-3.8-flash", bifrost_gateway_url=bifrost_url, virtual_key=api_key_input)
+            except Exception as e:
+                st.warning(f"Bifrost Gateway connection notice: {e}. Defaulting to Mock Provider for instant demo.")
+                provider = MockProvider(usage)
+        elif "Gemini" in provider_choice:
             try:
                 provider = GeminiProvider(usage, model_name="gemini-3.8-flash", api_key=api_key_input or None)
             except Exception as e:

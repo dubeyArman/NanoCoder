@@ -10,6 +10,7 @@ from nanocoder.compression.output_distiller import OutputDistiller
 from nanocoder.tools.file_tools import FileTools
 from nanocoder.tools.terminal_tools import TerminalTools
 from nanocoder.tools.repo_indexer import RepoIndexer
+from nanocoder.tools.tavily_search import TavilySearchTool
 from nanocoder.providers.base import BaseProvider
 from nanocoder.providers.gemini_provider import GeminiProvider
 from nanocoder.providers.mock_provider import MockProvider
@@ -52,6 +53,7 @@ COMPLETE: <summary of resolution>"""
         # Tools & Compressors
         self.file_tools = FileTools(self.workspace_root, self.token_usage)
         self.terminal_tools = TerminalTools(self.workspace_root, self.token_usage)
+        self.tavily_tool = TavilySearchTool(self.token_usage)
         self.context_manager = ContextManager(self.token_usage)
         
         # Provider selection
@@ -207,6 +209,12 @@ COMPLETE: <summary of resolution>"""
                 cm = re.search(r'command=["\'](.*?)["\']', action_str, re.DOTALL)
                 cmd = cm.group(1) if cm else action_str.split("(")[1].strip(")\"' ")
                 return self.terminal_tools.run_command(cmd)
+
+            # Match tavily_search(query="...")
+            elif action_str.startswith("tavily_search"):
+                qm = re.search(r'query=["\'](.*?)["\']', action_str)
+                q = qm.group(1) if qm else action_str.split("(")[1].strip(")\"' ")
+                return self.tavily_tool.search_docs(q)
 
             # Match write_new_file
             elif action_str.startswith("write_new_file"):

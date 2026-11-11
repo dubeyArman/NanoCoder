@@ -14,6 +14,7 @@ from rich.progress import Progress, SpinnerColumn, TextColumn
 from nanocoder.agent import NanoCoderAgent
 from nanocoder.providers.gemini_provider import GeminiProvider
 from nanocoder.providers.openai_provider import OpenAIProvider
+from nanocoder.providers.bifrost_provider import BifrostProvider
 from nanocoder.providers.mock_provider import MockProvider
 
 
@@ -21,7 +22,7 @@ def main():
     parser = argparse.ArgumentParser(description="NanoCoder: The Minimal-Token Autonomous Coding Agent")
     parser.add_argument("--task", type=str, default="", help="Coding task or bug description")
     parser.add_argument("--workspace", type=str, default="demo_workspace", help="Path to workspace directory")
-    parser.add_argument("--provider", type=str, choices=["gemini", "openai", "mock"], default="mock", help="Inference provider")
+    parser.add_argument("--provider", type=str, choices=["bifrost", "gemini", "openai", "mock"], default="mock", help="Inference provider (Bifrost by Maxim AI, Gemini, OpenAI, or Mock)")
     parser.add_argument("--model", type=str, default="gemini-3.8-flash", help="Model name for API providers")
     parser.add_argument("--max-steps", type=int, default=8, help="Max agent loop steps")
     args = parser.parse_args()
@@ -78,7 +79,17 @@ def main():
 
     # Select Provider
     token_usage_dummy = None
-    if args.provider == "gemini":
+    if args.provider == "bifrost":
+        try:
+            from nanocoder.telemetry.token_counter import TokenUsage
+            u = TokenUsage()
+            provider = BifrostProvider(u, model_name=args.model)
+        except Exception as e:
+            console.print(f"[bold red]Failed to connect to Bifrost Gateway: {e}[/bold red]")
+            console.print("[yellow]Ensure Bifrost Gateway is running (docker run -p 8080:8080 maximhq/bifrost). Falling back to Mock Provider for instant demo.[/yellow]")
+            from nanocoder.telemetry.token_counter import TokenUsage
+            provider = MockProvider(TokenUsage())
+    elif args.provider == "gemini":
         try:
             from nanocoder.telemetry.token_counter import TokenUsage
             u = TokenUsage()
